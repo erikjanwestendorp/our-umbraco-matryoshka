@@ -1,10 +1,10 @@
-﻿
+
 .matryoshka-tabs-list {
     overflow: hidden;
     margin: -20px 0 0 -20px;
     position: sticky;
     top:0;
-    z-index: 1;
+    z-index: 6;
     background: #fff;
     width: 100%;
     padding:0 20px;
@@ -42,7 +42,8 @@
     transition: all 0.3s ease-in-out 0s;
 }
 
-    .matryoshka-tab-link:not(.active):hover {
+    .matryoshka-tab-link:not(.active):hover,
+    .matryoshka-tab-link:focus {
         color: #2152a3;
     }
 
@@ -55,13 +56,18 @@
         background-color: #f5c1bc;
     }
 
-    .matryoshka-tab-link:not(.active):hover:before {
+    .matryoshka-tab-link:not(.active):hover:before,
+    .matryoshka-tab-link:not(.active):focus:before {
         opacity: 1;
         left: 12px;
         right: 12px;
         height: 4px;
         border-radius: 3px 3px 0 0;
         background-color: #e9e9eb;
+    }
+
+    .matryoshka-tab-link:focus {
+        outline: 0;
     }
 
 /* Validation */
@@ -89,15 +95,17 @@
     display:none;
 }
 
-.umb-editor-container {
-    z-index:2;
-}
-
 .matryoshka-tabbed-content-push {
     height:20px;
 }
 
 /* moves the Grid re-order bar down so it doesn't cover the tabs */
 #umb-grid > .umb-editor-sub-header[umb-sticky-bar] {
-    top: 64px;
+    top: 60px;
+}
+
+/* moves down the Grid RTE sections so it doesn't cover the tabs or re-order bar*/
+#umb-grid .umb-control.-active .mce-toolbar[style*="top: 177px;"] {
+    top: 241px !important;
+    z-index: 1000;
 }
