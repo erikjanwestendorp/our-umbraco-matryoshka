@@ -11,115 +11,56 @@
                 $scope.currentTab = $scope.content.tabs[0].label;
             }
 
-            // Directive for cached property groups.
-            var propertyGroupNodesDictionary = {};
+            $scope.overflowingTabs = 0;
 
-            var scrollableNode = appRootNode.closest(".umb-scrollable");
-            scrollableNode.addEventListener("scroll", onScroll);
-            scrollableNode.addEventListener("mousewheel", cancelScrollTween);
 
-            function onScroll(event) {
+            var tabNavItemsWidths = [];
+            // the parent is the component itself so we need to go one level higher
+            var container = $element.parent().parent();
 
-                var viewFocusY = scrollableNode.scrollTop + scrollableNode.clientHeight * .5;
+            $timeout(function(){
+                $element.find(".matryoshka-tabs-list li:not(.umb-tab--expand)").each(function() {
+                    tabNavItemsWidths.push($(this).outerWidth());
+                });
+                calculateWidth();
+            });
 
-                for (var i in $scope.content.tabs) {
-                    var group = $scope.content.tabs[i];
-                    var node = propertyGroupNodesDictionary[group.id];
-                    if (viewFocusY >= node.offsetTop && viewFocusY <= node.offsetTop + node.clientHeight) {
-                        setActiveAnchor(group);
-                        return;
-                    }
-                }
+            function calculateWidth(){
+                $timeout(function(){
+                    // 70 is the width of the expand menu (three dots) + 20 for the margin on umb-tabs-nav
+                    var containerWidth = container.width() - 90;
+                    var tabsWidth = 0;
+                    $scope.overflowingSections = 0;
+                    $scope.needTray = false;
+                    $scope.maxTabs = tabNavItemsWidths.length;
 
-            }
+                    // detect how many tabs we can show on the screen
+                    for (var i = 0; i <= tabNavItemsWidths.length; i++) {
+                        
+                        var tabWidth = tabNavItemsWidths[i];
+                        tabsWidth += tabWidth;
 
-            function setActiveAnchor(tab) {
-                if (tab.active !== true) {
-                    var i = $scope.content.tabs.length;
-                    while (i--) {
-                        $scope.content.tabs[i].active = false;
-                    }
-                    tab.active = true;
-                }
-            }
-            function getActiveAnchor() {
-                var i = $scope.content.tabs.length;
-                while (i--) {
-                    if ($scope.content.tabs[i].active === true)
-                        return $scope.content.tabs[i];
-                }
-                return false;
-            }
-            function getScrollPositionFor(id) {
-                if (propertyGroupNodesDictionary[id]) {
-                    return propertyGroupNodesDictionary[id].offsetTop - 20;// currently only relative to closest relatively positioned parent
-                }
-                return null;
-            }
-            function scrollTo(id) {
-                var y = getScrollPositionFor(id);
-                if (getScrollPositionFor !== null) {
-
-                    var viewportHeight = scrollableNode.clientHeight;
-                    var from = scrollableNode.scrollTop;
-                    var to = Math.min(y, scrollableNode.scrollHeight - viewportHeight);
-
-                    var animeObject = { _y: from };
-                    $scope.scrollTween = anime({
-                        targets: animeObject,
-                        _y: to,
-                        easing: 'easeOutExpo',
-                        duration: 200 + Math.min(Math.abs(to - from) / viewportHeight * 100, 400),
-                        update: () => {
-                            scrollableNode.scrollTo(0, animeObject._y);
+                        if(tabsWidth >= containerWidth) {
+                            $scope.needTray = true;
+                            $scope.maxTabs = i;
+                            $scope.overflowingTabs = $scope.maxTabs - $scope.content.tabs.length;
+                            break;
                         }
-                    });
-
-                }
-            }
-            function jumpTo(id) {
-                var y = getScrollPositionFor(id);
-                if (getScrollPositionFor !== null) {
-                    cancelScrollTween();
-                    scrollableNode.scrollTo(0, y);
-                }
-            }
-            function cancelScrollTween() {
-                if ($scope.scrollTween) {
-                    $scope.scrollTween.pause();
-                }
+                    }
+                    
+                });
             }
 
-            $scope.registerPropertyGroup = function (element, appAnchor) {
-                propertyGroupNodesDictionary[appAnchor] = element;
-            };
-
-            $scope.$on("editors.apps.appChanged", function ($event, $args) {
-                // if app changed to this app, then we want to scroll to the current anchor
-                if ($args.app.alias === "umbContent") {
-                    var activeAnchor = getActiveAnchor();
-                    $timeout(jumpTo.bind(null, [activeAnchor.id]));
-                }
+            var ro = new ResizeObserver(function() {
+                calculateWidth();
             });
 
-            $scope.$on("editors.apps.appAnchorChanged", function ($event, $args) {
-                if ($args.app.alias === "umbContent") {
-                    setActiveAnchor($args.anchor);
-                    scrollTo($args.anchor.id);
-                }
-            });
-
-            //ensure to unregister from all dom-events
-            $scope.$on('$destroy', function () {
-                cancelScrollTween();
-                scrollableNode.removeEventListener("scroll", onScroll);
-                scrollableNode.removeEventListener("mousewheel", cancelScrollTween);
-            });
-
+            ro.observe(container[0]);
         }
 
-        function controller($scope, $element, $attrs) {
+        function controller($scope, $element, $attrs, $timeout) {
 
+            var appRootNode = $element[0];
 
             $scope.currentTab = $scope.content.tabs[0];
 
@@ -138,9 +79,8 @@
 
             $scope.changeTab = function changeTab(label) {
                 $scope.currentTab = label;
+                $scope.scrollTo(label, 0);
             };
-
-
 
             $scope.activeVariant = this.activeVariant;
 
@@ -159,12 +99,101 @@
                     }
                 }
             );
+                
+            $scope.needTray = false;
+            $scope.showTray = false;
+            $scope.overflowingSections = 0;
+
+            $scope.toggleTray = toggleTray;
+            $scope.hideTray = hideTray;
+            
+            function toggleTray() {
+                $scope.showTray = !$scope.showTray;
+            }
+
+            function hideTray() {
+                $scope.showTray = false;
+            }
+
+            
+            $scope.groupSeparators = {};
+            var scrollableNode = appRootNode.closest('.umb-scrollable');
+            scrollableNode.addEventListener('mousewheel', cancelScrollTween);
+
+            function getScrollPositionFor(tab, alias) {
+                var offset = null;
+                var groupSeparator = null;
+
+                if (alias == 0) {
+                    offset = 0;
+                } else {
+                    var previousTab = $scope.currentTab + "";
+                    $scope.currentTab = tab;
+
+                    groupSeparator = document.querySelector("#our-matryoshka-group-separator-" + alias);
+
+                    if (!groupSeparator) {
+                        $scope.currentTab = previousTab;
+                        offset = null;
+                    }
+                }
+
+                return $timeout(function () {
+                    if (groupSeparator) {
+                        offset = groupSeparator.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.offsetTop - 40;
+                    }
+
+                    return offset;
+                });
+            }
+
+            $scope.scrollTo = function(tab, alias) {
+                getScrollPositionFor(tab, alias).then(function(response) {
+                    var y = response;
+
+                    if (alias === 0 || y !== null) {
+                        var viewportHeight = scrollableNode.clientHeight;
+                        var from = scrollableNode.scrollTop;
+                        var to = Math.min(y, scrollableNode.scrollHeight - viewportHeight);
+                        var animeObject = { _y: from };
+                        $scope.scrollTween = anime({
+                            targets: animeObject,
+                            _y: to,
+                            easing: 'easeOutExpo',
+                            duration: 200 + Math.min(Math.abs(to - from) / viewportHeight * 100, 400),
+                            update: function update() {
+                                scrollableNode.scrollTo(0, animeObject._y);
+                            }
+                        });
+                    }
+                });
+            }
+            function cancelScrollTween() {
+                if ($scope.scrollTween) {
+                    $scope.scrollTween.pause();
+                }
+            }
+
+            $scope.content.tabs.map(function(tab) {
+                $scope.groupSeparators[tab.label] = [];
+
+                tab.properties.map(function(prop, i) {
+                    if (i > 0 && prop.editor == "Our.Umbraco.Matryoshka.GroupSeparator" && prop.config.anchor == "1") {
+                        $scope.groupSeparators[tab.label].push(prop);
+                    }
+                });
+            });
+            
+            //ensure to unregister from all dom-events
+            $scope.$on('$destroy', function () {
+                cancelScrollTween();
+            });
         }
 
         var directive = {
             restrict: 'E',
             replace: true,
-            templateUrl: '/App_Plugins/Our.Umbraco.Matryoshka/directives/matryoshka-tabbed-content.html',
+            templateUrl: '/App_Plugins/Our.Umbraco.Matryoshka/directives/matryoshka-tabbed-content.html?umb_rnd=' + Umbraco.Sys.ServerVariables.application.cacheBuster,
             controller: controller,
             link: link,
             scope: {

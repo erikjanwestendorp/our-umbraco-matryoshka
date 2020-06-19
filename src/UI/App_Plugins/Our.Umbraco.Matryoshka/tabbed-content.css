@@ -1,6 +1,5 @@
 
 .matryoshka-tabs-list {
-    overflow: hidden;
     margin: -20px 0 0 -20px;
     position: sticky;
     top:0;
@@ -9,15 +8,6 @@
     width: 100%;
     padding:0 20px;
 }
-
-    .matryoshka-tabs-list:after {
-        content: '';
-        position: absolute;
-        left: -20px;
-        right: -20px;
-        bottom: 0px;
-        border-bottom: 1px solid #e9e9eb;
-    }
 
 .matryoshka-tab-link {
     position: relative;
@@ -72,27 +62,54 @@
 
 /* Validation */
 
-.matryoshka-tab-link .icon {
+.matryoshka-tabs-list .umb-tab .icon {
     display: none;
 }
 
-.show-validation .matryoshka-tab-link.hasError .icon {
+.show-validation .matryoshka-tabs-list .umb-tab.hasError .icon {
     display: inline;
     position: absolute;
     color: #d42054;
 }
 
-.show-validation .matryoshka-tab-link.hasError span {
+.show-validation .matryoshka-tabs-list .umb-tab.hasError span {
     margin-left: 20px;
 }
 
-.matryoshka-tab-link p {
+.matryoshka-tabs-list .umb-tab p {
     margin: 0;
 }
 
 /* hide the "Content" dropdown (avoid confusion) */
 .dropdown-menu.umb-sub-views-nav-item__anchor_dropdown {
     display:none;
+}
+
+.matryoshka-tab-dropdown {
+    display:none;
+    margin-top: -1px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    box-shadow: 0 3px 5px rgba(0,0,0,.15);
+}
+
+.matryoshka-tab-dropdown .umb-tab-button:focus {
+    outline:none;
+}
+
+.matryoshka-tab-link:hover .matryoshka-tab-dropdown,
+.matryoshka-tab-dropdown:hover {
+    display:block;
+}
+
+.matryoshka-tab-link-button {
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    opacity:0;
+    width:100%;
 }
 
 .matryoshka-tabbed-content-push {
